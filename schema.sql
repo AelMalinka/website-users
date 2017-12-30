@@ -18,7 +18,8 @@ CREATE TABLE users.users (
 
 CREATE TABLE users.permissions (
 	id SERIAL PRIMARY KEY,
-	data JSON NOT NULL
+	app TEXT NOT NULL,
+	data JSONB NOT NULL
 );
 
 CREATE TABLE users.users_x_permissions (
@@ -37,7 +38,7 @@ CREATE VIEW
 	users.sessions (id, name, hash)
 AS
 	SELECT
-		users.sessions_real.id, name, digest(name || time, 'sha512') AS hash
+		users.sessions_real.id, name, encode(digest(name || time, 'sha256'), 'base64') AS hash
 	FROM
 		users.sessions_real
 	INNER JOIN
@@ -46,27 +47,45 @@ AS
 		expire > now()
 ;
 
+CREATE VIEW
+	users.permission (name, app, permission)
+AS
+	SELECT
+		users.users.name,
+		users.permissions.app,
+		json_agg(users.permissions.data)
+	FROM
+		users.permissions
+	INNER JOIN
+		users.users_x_permissions ON users.permissions.id = users.users_x_permissions.permission
+	INNER JOIN
+		users.users ON users.users_x_permissions.userid = users.users.id
+	GROUP BY
+		name, app
+;
+
 --- Functions
 
-CREATE FUNCTION users.login(uname TEXT, pw TEXT) RETURNS BYTEA AS $$
+CREATE FUNCTION users.login(uname TEXT, pw TEXT) RETURNS TEXT AS $$
 DECLARE
 	valid BOOLEAN := false;
 	ret TEXT := '';
 	tid INT := 0;
 BEGIN
-	SELECT (pass = crypt(pw, pass)) INTO STRICT valid FROM users.users WHERE name = uname;
+	SELECT (pass = crypt(pw, pass)) INTO valid FROM users.users WHERE name = uname;
+	IF NOT FOUND THEN
+		RAISE foreign_key_violation USING message = 'user not found';
+	END IF;
 	IF valid THEN
 		INSERT INTO users.sessions_real(userid) SELECT id FROM users.users WHERE name = uname RETURNING id INTO STRICT tid;
 		SELECT hash INTO STRICT ret FROM users.sessions WHERE id = tid;
+	ELSE
+		RAISE check_violation USING message = 'invalid password';
 	END IF;
 
 	RETURN ret;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE FUNCTION users.logout(uname TEXT) RETURNS VOID AS $$
-DELETE FROM users.sessions_real WHERE userid = (SELECT id FROM users.users WHERE name = uname);
-$$ LANGUAGE SQL;
 
 --- Triggers
 
