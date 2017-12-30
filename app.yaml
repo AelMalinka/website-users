@@ -1,0 +1,61 @@
+# Copyright 2017 (c) Michael Thomas (malinka) <malinka@entropy-development.com>
+# Distributed under the terms of the GNU Affero General Public License v3
+
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+    name: users
+spec:
+    template:
+        metadata:
+            labels:
+                app: users
+        spec:
+            containers:
+            - name: users
+              image: aelmalinka/users
+              ports:
+              - containerPort: 8080
+              env:
+              - name: PORT
+                value: "8080"
+              - name: PGHOST
+                valueFrom:
+                    configMapKeyRef:
+                        name: website-config
+                        key: db.host
+              - name: PGPORT
+                valueFrom:
+                    configMapKeyRef:
+                        name: website-config
+                        key: db.port
+              - name: PGDATABASE
+                valueFrom:
+                    configMapKeyRef:
+                        name: website-config
+                        key: db.name
+              - name: PGUSER
+                valueFrom:
+                    secretKeyRef:
+                        name: website-secret
+                        key: db.user
+              - name: PGPASSWORD
+                valueFrom:
+                    secretKeyRef:
+                        name: website-secret
+                        key: db.pass
+---
+apiVersion: v1
+kind: Service
+imetadata:
+    name: users
+    lables:
+        app: users
+spec:
+    type: LoadBalancer
+    ports:
+    - port: 8080
+      protocol: TCP
+      name: http-users
+    selector:
+        app: users
