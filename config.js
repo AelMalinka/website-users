@@ -5,4 +5,5 @@
 module.exports = {
 	name: 'users',
 	port: process.env.PORT | 8084,
+	cipher: process.env.PASSWORD_CIPHER || 'bf',
 };
