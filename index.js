@@ -41,7 +41,7 @@ const perm = {
 		if(!ctx.permission.modify)
 			ctx.throw(401);
 
-		const result = await ctx.pg.query('INSERT INTO users.users_x_permissions (username, permission) VALUES ($1::text, $2::int)', [ctx.request.body.name, ctx.request.body.permission]);
+		const result = await ctx.pg.query('INSERT INTO users.users_x_permissions (username, permission) VALUES ($1::text, $2::int)', [ctx.request.body.name, ctx.request.body.id]);
 
 		ctx.body = result.command + ' ' + result.rowCount;
 	},
