@@ -124,7 +124,7 @@ app.use(async (ctx, next) => {
 
 app.use(route.post('/register', user.register));
 app.use(route.post('/login', user.login));
-app.use(route.get('/logout', user.logout));
+app.use(route.post('/logout', user.logout));
 
 app.use(route.get('/perm/:app', perm.get));
 app.use(route.put('/perm/:app', perm.add));
